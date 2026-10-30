@@ -6,8 +6,9 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Loading, Message, useContentWidth } from '@/components/states';
-import { fetchAlbum, fetchAlbumPhotos, setAlbumCover } from '@/lib/api';
+import { fetchAlbum, fetchAlbumPhotos, setAlbumCover, syncAlbum, type SyncProgress } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { pickPhotos } from '@/lib/media';
 import { colors } from '@/lib/theme';
 
 const COLUMNS = 3;
@@ -21,6 +22,7 @@ export default function AlbumProfile() {
   const width = useContentWidth();
   const tile = (width - GAP * (COLUMNS - 1)) / COLUMNS;
   const [picking, setPicking] = useState(false);
+  const [uploading, setUploading] = useState<SyncProgress | null>(null);
 
   const album = useQuery({ queryKey: ['album', id], queryFn: () => fetchAlbum(id), enabled: !!id });
   const photos = useQuery({
@@ -36,6 +38,21 @@ export default function AlbumProfile() {
       for (const key of ['album', 'albumPhotos', 'myAlbums', 'feed']) qc.invalidateQueries({ queryKey: [key] });
     },
   });
+
+  const addPhotos = async () => {
+    if (!album.data) return;
+    try {
+      const sources = await pickPhotos();
+      if (sources.length === 0) return;
+      setUploading({ done: 0, total: sources.length });
+      await syncAlbum(album.data, sources, setUploading);
+      for (const key of ['album', 'albumPhotos', 'myAlbums', 'feed']) qc.invalidateQueries({ queryKey: [key] });
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setUploading(null);
+    }
+  };
 
   if (album.isPending || photos.isPending) return <Loading />;
   if (album.isError || photos.isError) {
@@ -81,6 +98,13 @@ export default function AlbumProfile() {
               <Pressable onPress={() => router.push({ pathname: '/album/[id]/comments', params: { id: a.id } })}>
                 <Text style={styles.commentsLink}>All comments</Text>
               </Pressable>
+              {a.owner_id === me && (
+                <Pressable disabled={!!uploading} onPress={addPhotos}>
+                  <Text style={styles.commentsLink}>
+                    {uploading ? `Uploading ${uploading.done} of ${uploading.total}…` : 'Add photos'}
+                  </Text>
+                </Pressable>
+              )}
               {a.owner_id === me && (
                 <Pressable onPress={() => setPicking((p) => !p)}>
                   <Text style={styles.commentsLink}>{picking ? 'Cancel' : 'Change album photo'}</Text>
