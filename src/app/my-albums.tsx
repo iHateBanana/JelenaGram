@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ActionBar } from '@/components/action-bar';
 import { Avatar } from '@/components/avatar';
 import { Loading, Message, useContentWidth } from '@/components/states';
 import { deleteAlbum, fetchMyAlbums, syncAlbum, type SyncProgress } from '@/lib/api';
@@ -60,15 +61,7 @@ export default function MyAlbums() {
 
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <Link href="/add-album" style={{ color: colors.link, fontWeight: '600', fontSize: 15 }}>
-              Add album
-            </Link>
-          ),
-        }}
-      />
+      <ActionBar label="Add album" onPress={() => router.push('/add-album')} />
       <FlatList
         style={{ width }}
         data={albums.data}

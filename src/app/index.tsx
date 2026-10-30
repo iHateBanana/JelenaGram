@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 
+import { ActionBar } from '@/components/action-bar';
 import { Post, postLayout } from '@/components/post';
 import { Loading, Message, useContentWidth } from '@/components/states';
 import { fetchFeedAll } from '@/lib/api';
@@ -54,6 +55,7 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
+      <ActionBar label="My albums" onPress={() => router.push('/my-albums')} />
       <FlatList
         style={{ width }}
         data={photos}

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Link, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { colors } from '@/lib/theme';
@@ -35,23 +35,6 @@ function RootStack() {
           name="index"
           options={{
             title: 'JelenaGram',
-            headerRight: () => (
-              <Link href="/my-albums" asChild>
-                <Pressable
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 14,
-                    paddingVertical: 7,
-                    borderRadius: 999,
-                    backgroundColor: colors.text,
-                    opacity: pressed ? 0.8 : 1,
-                    marginRight: 4,
-                  })}>
-                  <Text style={{ color: colors.bg, fontWeight: '600', fontSize: 14 }}>My albums</Text>
-                </Pressable>
-              </Link>
-            ),
           }}
         />
         <Stack.Screen name="my-albums" options={{ title: 'My albums' }} />
