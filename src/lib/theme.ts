@@ -2,44 +2,56 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
+/** Brand design tokens. The single source of truth for colours, radii and spacing. */
 export const palette = {
-  forest: '#243E36',
-  periwinkle: '#909CC2',
-  lavender: '#F3EAF4',
+  forest: '#2A5C47',
+  sage: '#CFE5D6',
+  lavender: '#A590CF',
+  lilac: '#E6DAF5',
+  plum: '#5E4580',
+  moonlight: '#FBF7F1',
+  ink: '#2B2236',
+  surface: '#FFFFFF',
 };
 
+export const radius = { sm: 16, card: 24, pill: 999 };
+export const space = { xs: 8, sm: 16, md: 24, lg: 32, xl: 48 };
+
 const light = {
-  bg: '#EDE2EF',
-  text: palette.forest,
-  muted: '#5B6B70',
-  border: '#D9CCDF',
-  accent: palette.forest,
-  onAccent: '#F8F2F9',
-  link: '#4F5F96',
-  like: '#6F7DB4',
-  likeTint: '#E2E5F4',
-  placeholder: '#E2D7E6',
-  card: '#FCF9FC',
-  badge: palette.periwinkle,
-  dot: '#C0525E',
+  bg: palette.moonlight,
+  text: palette.ink,
+  muted: palette.plum,
+  border: palette.lilac,
+  accent: palette.lavender,
+  onAccent: palette.ink,
+  forest: palette.forest,
+  onForest: palette.moonlight,
+  link: palette.plum,
+  like: palette.lavender,
+  likeTint: palette.lilac,
+  placeholder: palette.lilac,
+  card: palette.surface,
+  badge: palette.lavender,
+  dot: palette.plum,
 };
 
 const dark: typeof light = {
-  bg: '#101815',
-  text: palette.lavender,
-  muted: '#9AA8A3',
-  border: '#2B3B35',
-  accent: palette.periwinkle,
-  onAccent: '#101815',
-  link: '#AEB8DE',
-  like: '#AEB8DE',
-  likeTint: '#2A3250',
-  placeholder: '#1F2C27',
-  card: '#18231F',
-  badge: palette.periwinkle,
-  dot: '#E07A86',
+  bg: '#1A1424',
+  text: palette.moonlight,
+  muted: '#CDBDEA',
+  border: '#3A2F4D',
+  accent: palette.lavender,
+  onAccent: palette.ink,
+  forest: palette.forest,
+  onForest: palette.moonlight,
+  link: '#CDBDEA',
+  like: palette.lavender,
+  likeTint: '#3A2F4D',
+  placeholder: '#33284A',
+  card: palette.ink,
+  badge: palette.lavender,
+  dot: palette.lilac,
 };
-
 export type Scheme = 'light' | 'dark';
 export type SchemePreference = 'system' | Scheme;
 

@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-import { colors, useTheme } from '@/lib/theme';
+import { colors, palette, useTheme } from '@/lib/theme';
 
 type Heart = { id: number; x: number; y: number; drift: number; rise: number; size: number; delay: number; tint: number };
 
@@ -43,7 +43,7 @@ function FloatingHeart({ heart, onDone }: { heart: Heart; onDone: (id: number) =
         opacity,
         transform: [{ translateX }, { translateY }, { scale }],
       }}>
-      <MaterialIcons name="favorite" size={heart.size} color={heart.tint % 3 === 0 ? colors.dot : colors.like} />
+      <MaterialIcons name="favorite" size={heart.size} color={heart.tint % 3 === 0 ? palette.lilac : palette.lavender} />
     </Animated.View>
   );
 }

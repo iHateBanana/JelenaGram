@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
 import { downloadAlbumZip, supportsZip } from '@/lib/export-zip';
 import { pickPhotos } from '@/lib/media';
-import { colors, themed, useTheme } from '@/lib/theme';
+import { palette, colors, themed, useTheme } from '@/lib/theme';
 import type { Photo } from '@/lib/types';
 
 const COLUMNS = 3;
@@ -299,7 +299,7 @@ export default function AlbumProfile() {
 
 const styles = themed(() => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 20, padding: 16 },
-  name: { fontSize: 24, fontFamily: fonts.heading, color: colors.text },
+  name: { fontSize: 28, lineHeight: 31, fontFamily: fonts.heading, color: colors.text },
   count: { marginTop: 4, color: colors.muted, fontSize: 15 },
   countNum: { fontWeight: '700', color: colors.text },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 2 },
@@ -326,8 +326,8 @@ const styles = themed(() => StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderColor: palette.surface,
+    backgroundColor: palette.lilac,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -343,7 +343,7 @@ const styles = themed(() => StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.border,
   },
-  bulkBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
+  bulkBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: 999, minHeight: 48, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   bulkDanger: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.dot },
   bulkText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
   disabled: { opacity: 0.4 },

@@ -47,6 +47,6 @@ const styles = themed(() => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   title: { fontSize: 20, fontFamily: fonts.headingRegular, color: colors.text, textAlign: 'center' },
   body: { color: colors.muted, textAlign: 'center' },
-  btn: { marginTop: 8, backgroundColor: colors.accent, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
+  btn: { marginTop: 8, backgroundColor: colors.accent, minHeight: 48, justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 999 },
   btnText: { color: colors.onAccent, fontWeight: '700' },
 }));

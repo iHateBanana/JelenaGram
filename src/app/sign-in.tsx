@@ -62,19 +62,19 @@ export default function SignIn() {
 const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.bg },
   card: { width: '100%', maxWidth: 360, gap: 12 },
-  logo: { fontSize: 40, fontFamily: fonts.heading, textAlign: 'center', color: colors.text },
+  logo: { fontSize: 44, lineHeight: 48, fontFamily: fonts.heading, textAlign: 'center', color: colors.text },
   sub: { textAlign: 'center', color: colors.muted, marginBottom: 12 },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.card,
   },
-  error: { color: colors.like },
-  button: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
+  error: { color: colors.link },
+  button: { backgroundColor: colors.accent, borderRadius: 999, minHeight: 48, paddingVertical: 14, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
   buttonText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
 }));

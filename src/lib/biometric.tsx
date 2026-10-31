@@ -81,6 +81,6 @@ export function BiometricGate({ children }: { children: ReactNode }) {
 const styles = themed(() => StyleSheet.create({
   cover: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 20 },
   title: { fontSize: 30, fontFamily: fonts.heading, color: colors.text },
-  button: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, paddingHorizontal: 24 },
+  button: { backgroundColor: colors.accent, borderRadius: 999, minHeight: 48, justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 28 },
   buttonText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
 }));

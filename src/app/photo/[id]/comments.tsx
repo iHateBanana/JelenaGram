@@ -130,7 +130,7 @@ const styles = themed(() => StyleSheet.create({
   delete: { color: colors.muted, fontSize: 13, marginTop: 2 },
   reply: { marginLeft: 28 },
   replyBar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 6, backgroundColor: colors.likeTint },
-  error: { color: colors.like, paddingHorizontal: 16 },
+  error: { color: colors.link, paddingHorizontal: 16 },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',

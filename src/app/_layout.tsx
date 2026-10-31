@@ -8,8 +8,8 @@ import { ActivityIndicator, View } from 'react-native';
 import { fonts, Text } from '@/components/text';
 
 import { HeartsProvider } from '@/components/hearts';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold_Italic } from '@expo-google-fonts/playfair-display';
+import { Nunito_400Regular, Nunito_700Bold } from '@expo-google-fonts/nunito';
+import { Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import { useFonts } from 'expo-font';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { BiometricGate } from '@/lib/biometric';
@@ -26,14 +26,7 @@ const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: 'jg.
 function RootStack() {
   const { session, loading } = useAuth();
   useTheme();
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    PlayfairDisplay_600SemiBold,
-    PlayfairDisplay_700Bold_Italic,
-  });
+  const [fontsLoaded, fontError] = useFonts({ Nunito_400Regular, Nunito_700Bold, Fraunces_600SemiBold_Italic });
 
   if (loading || (!fontsLoaded && !fontError)) {
     return (

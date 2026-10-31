@@ -120,7 +120,7 @@ export default function MyAlbums() {
                   <Text style={styles.action}>Comments</Text>
                 </Pressable>
                 <Pressable onPress={() => remove.mutate(item)}>
-                  <Text style={[styles.action, { color: colors.like }]}>Remove</Text>
+                  <Text style={[styles.action, { color: colors.link }]}>Remove</Text>
                 </Pressable>
               </View>
             </View>
@@ -138,7 +138,7 @@ const styles = themed(() => StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 24,
   },
   info: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   name: { fontSize: 16, fontWeight: '600', color: colors.text },
