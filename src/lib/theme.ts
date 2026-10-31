@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 /** Brand design tokens. The single source of truth for colours, radii and spacing. */
 export const palette = {
@@ -108,6 +108,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyScheme(scheme);
     setApplied(scheme);
   }
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const bg = scheme === 'dark' ? dark.bg : light.bg;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
+    document.documentElement.style.backgroundColor = bg;
+    document.documentElement.style.colorScheme = scheme;
+    document.body.style.backgroundColor = bg;
+  }, [scheme]);
 
   const setPreference = useCallback((p: SchemePreference) => {
     setPref(p);
