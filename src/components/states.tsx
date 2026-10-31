@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { fonts, Text } from '@/components/text';
 import { useWindowDimensions } from 'react-native';
 
 import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
@@ -44,7 +45,7 @@ export function Message({
 
 const styles = themed(() => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  title: { fontSize: 20, fontFamily: fonts.headingRegular, color: colors.text, textAlign: 'center' },
   body: { color: colors.muted, textAlign: 'center' },
   btn: { marginTop: 8, backgroundColor: colors.accent, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
   btnText: { color: colors.onAccent, fontWeight: '700' },

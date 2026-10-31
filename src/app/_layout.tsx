@@ -4,9 +4,13 @@ import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { fonts, Text } from '@/components/text';
 
 import { HeartsProvider } from '@/components/hearts';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold_Italic } from '@expo-google-fonts/playfair-display';
+import { useFonts } from 'expo-font';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { BiometricGate } from '@/lib/biometric';
 import { colors, ThemeProvider, useTheme } from '@/lib/theme';
@@ -22,8 +26,16 @@ const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: 'jg.
 function RootStack() {
   const { session, loading } = useAuth();
   useTheme();
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    PlayfairDisplay_600SemiBold,
+    PlayfairDisplay_700Bold_Italic,
+  });
 
-  if (loading) {
+  if (loading || (!fontsLoaded && !fontError)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator />
@@ -36,7 +48,8 @@ function RootStack() {
       screenOptions={{
         headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.bg },
-        headerTitleStyle: { color: colors.text },
+        headerTitleStyle: { color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
+        headerBackTitleStyle: { fontFamily: fonts.regular },
         headerTintColor: colors.text,
         contentStyle: { backgroundColor: colors.bg },
       }}>

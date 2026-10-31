@@ -1,14 +1,6 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { fonts, Text, TextInput } from '@/components/text';
 
 import { supabase } from '@/lib/supabase';
 import { colors, themed, useTheme } from '@/lib/theme';
@@ -70,7 +62,7 @@ export default function SignIn() {
 const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.bg },
   card: { width: '100%', maxWidth: 360, gap: 12 },
-  logo: { fontSize: 36, fontWeight: '700', textAlign: 'center', color: colors.text },
+  logo: { fontSize: 40, fontFamily: fonts.heading, textAlign: 'center', color: colors.text },
   sub: { textAlign: 'center', color: colors.muted, marginBottom: 12 },
   input: {
     borderWidth: 1,

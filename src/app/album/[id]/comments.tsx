@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/text';
 
 import { Loading, Message, useContentWidth } from '@/components/states';
 import { fetchAlbumComments } from '@/lib/api';

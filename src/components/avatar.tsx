@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '@/components/text';
 
 import { colors, themed, useTheme } from '@/lib/theme';
 

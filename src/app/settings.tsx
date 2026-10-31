@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text, TextInput } from '@/components/text';
 
 import { updateDisplayName, updatePassword } from '@/lib/api';
 import { useAuth } from '@/lib/auth';

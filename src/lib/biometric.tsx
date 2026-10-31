@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { fonts, Text } from '@/components/text';
 
 import { colors, themed, useTheme } from '@/lib/theme';
 
@@ -79,7 +80,7 @@ export function BiometricGate({ children }: { children: ReactNode }) {
 
 const styles = themed(() => StyleSheet.create({
   cover: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 20 },
-  title: { fontSize: 28, fontWeight: '700', color: colors.text },
+  title: { fontSize: 30, fontFamily: fonts.heading, color: colors.text },
   button: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, paddingHorizontal: 24 },
   buttonText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
 }));

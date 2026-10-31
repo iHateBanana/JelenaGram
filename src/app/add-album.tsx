@@ -1,15 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { fonts, Text, TextInput } from '@/components/text';
 
 import { Loading, Message } from '@/components/states';
 import { createAlbum, deleteAlbum, syncAlbum, type SyncProgress } from '@/lib/api';
@@ -151,7 +144,7 @@ export default function AddAlbum() {
 
 const styles = themed(() => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text },
+  title: { fontSize: 20, fontFamily: fonts.headingRegular, color: colors.text },
   muted: { color: colors.muted },
   hint: { color: colors.muted, padding: 16 },
   error: { color: colors.like, paddingHorizontal: 16 },

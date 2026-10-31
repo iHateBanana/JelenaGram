@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { fonts, Text } from '@/components/text';
 
 import { Avatar } from '@/components/avatar';
 import { Loading, Message, useContentWidth } from '@/components/states';
@@ -298,7 +299,7 @@ export default function AlbumProfile() {
 
 const styles = themed(() => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 20, padding: 16 },
-  name: { fontSize: 20, fontWeight: '700', color: colors.text },
+  name: { fontSize: 24, fontFamily: fonts.heading, color: colors.text },
   count: { marginTop: 4, color: colors.muted, fontSize: 15 },
   countNum: { fontWeight: '700', color: colors.text },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 2 },
@@ -316,7 +317,7 @@ const styles = themed(() => StyleSheet.create({
   toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 16, backgroundColor: colors.card },
   toggleOn: { backgroundColor: colors.accent },
   toggleText: { color: colors.text, fontWeight: '600' },
-  month: { color: colors.text, fontWeight: '700', fontSize: 15, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 6 },
+  month: { color: colors.text, fontFamily: fonts.headingRegular, fontSize: 18, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 6 },
   check: {
     position: 'absolute',
     top: 6,
