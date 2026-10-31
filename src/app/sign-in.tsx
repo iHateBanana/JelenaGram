@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
-import { colors } from '@/lib/theme';
+import { colors, themed, useTheme } from '@/lib/theme';
 
 export default function SignIn() {
+  useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,7 @@ export default function SignIn() {
         <TextInput
           style={styles.input}
           placeholder="Email"
+          placeholderTextColor={colors.muted}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -46,6 +48,7 @@ export default function SignIn() {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor={colors.muted}
           secureTextEntry
           autoComplete="password"
           value={password}
@@ -64,7 +67,7 @@ export default function SignIn() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.bg },
   card: { width: '100%', maxWidth: 360, gap: 12 },
   logo: { fontSize: 36, fontWeight: '700', textAlign: 'center', color: colors.text },
@@ -76,9 +79,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
+    color: colors.text,
     backgroundColor: colors.card,
   },
   error: { color: colors.like },
   button: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
   buttonText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
-});
+}));

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FlatList,
@@ -15,17 +15,37 @@ import {
 
 import { Loading, Message } from '@/components/states';
 import { addComment, deleteComment, fetchComments } from '@/lib/api';
+import type { Comment } from '@/lib/types';
 import { useAuth } from '@/lib/auth';
-import { colors, MAX_CONTENT_WIDTH } from '@/lib/theme';
+import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
 
 export default function Comments() {
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { me, nameOf } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState('');
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const insets = useSafeAreaInsets();
 
   const comments = useQuery({ queryKey: ['comments', id], queryFn: () => fetchComments(id), enabled: !!id });
+
+  const threaded = useMemo(() => {
+    const all = comments.data ?? [];
+    const byId = new Map(all.map((c) => [c.id, c]));
+    const rootOf = (c: Comment): string => {
+      let cur = c;
+      while (cur.parent_id && byId.has(cur.parent_id)) cur = byId.get(cur.parent_id)!;
+      return cur.id;
+    };
+    const roots = all.filter((c) => !c.parent_id || !byId.has(c.parent_id));
+    const out: { c: Comment; reply: boolean }[] = [];
+    for (const r of roots) {
+      out.push({ c: r, reply: false });
+      for (const c of all) if (c.parent_id && c.id !== r.id && rootOf(c) === r.id) out.push({ c, reply: true });
+    }
+    return out;
+  }, [comments.data]);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['comments', id] });
@@ -35,9 +55,10 @@ export default function Comments() {
   };
 
   const send = useMutation({
-    mutationFn: () => addComment(id, text),
+    mutationFn: () => addComment(id, text, replyTo?.id ?? null),
     onSuccess: () => {
       setText('');
+      setReplyTo(null);
       refresh();
     },
   });
@@ -57,16 +78,21 @@ export default function Comments() {
       keyboardVerticalOffset={90}>
       <View style={{ flex: 1, width: '100%', maxWidth: MAX_CONTENT_WIDTH }}>
         <FlatList
-          data={comments.data}
-          keyExtractor={(c) => c.id}
+          data={threaded}
+          keyExtractor={(x) => x.c.id}
           contentContainerStyle={{ padding: 16, gap: 14, flexGrow: 1 }}
           ListEmptyComponent={<Message title="No comments yet" body="Be the first to say something." />}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={styles.body}>
-                <Text style={styles.author}>{nameOf(item.user_id)} </Text>
-                {item.body}
-              </Text>
+          renderItem={({ item: { c: item, reply } }) => (
+            <View style={[styles.row, reply && styles.reply]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.body}>
+                  <Text style={styles.author}>{nameOf(item.user_id)} </Text>
+                  {item.body}
+                </Text>
+                <Pressable onPress={() => setReplyTo(item)} hitSlop={8}>
+                  <Text style={styles.delete}>Reply</Text>
+                </Pressable>
+              </View>
               {item.user_id === me && (
                 <Pressable onPress={() => remove.mutate(item.id)} hitSlop={8}>
                   <Text style={styles.delete}>Delete</Text>
@@ -76,10 +102,21 @@ export default function Comments() {
           )}
         />
         {send.isError && <Text style={styles.error}>{send.error.message}</Text>}
+        {replyTo && (
+          <View style={styles.replyBar}>
+            <Text style={styles.delete} numberOfLines={1}>
+              Replying to {nameOf(replyTo.user_id)}
+            </Text>
+            <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+              <Text style={styles.delete}>Cancel</Text>
+            </Pressable>
+          </View>
+        )}
         <View style={[styles.inputBar, { paddingBottom: Math.max(12, insets.bottom + 4) }]}>
           <TextInput
             style={styles.input}
-            placeholder="Add a comment…"
+            placeholder={replyTo ? 'Write a reply…' : 'Add a comment…'}
+            placeholderTextColor={colors.muted}
             value={text}
             onChangeText={setText}
             multiline
@@ -94,11 +131,13 @@ export default function Comments() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   body: { flex: 1, fontSize: 15, color: colors.text },
   author: { fontWeight: '700' },
-  delete: { color: colors.muted, fontSize: 13 },
+  delete: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  reply: { marginLeft: 28 },
+  replyBar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 6, backgroundColor: colors.likeTint },
   error: { color: colors.like, paddingHorizontal: 16 },
   inputBar: {
     flexDirection: 'row',
@@ -117,7 +156,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     fontSize: 15,
+    color: colors.text,
   },
   post: { color: colors.link, fontWeight: '700', fontSize: 16 },
   postBtn: { paddingVertical: 8, paddingHorizontal: 4 },
-});
+}));

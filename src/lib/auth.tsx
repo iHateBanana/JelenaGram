@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { fetchProfiles } from './api';
@@ -19,6 +19,7 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const qc = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,9 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       otherName: otherId ? profiles[otherId] : 'your partner',
       signOut: async () => {
         await supabase.auth.signOut();
+        qc.clear();
       },
     };
-  }, [session, loading, me, profiles]);
+  }, [session, loading, me, profiles, qc]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

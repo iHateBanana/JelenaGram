@@ -22,6 +22,7 @@ export type Photo = {
   myLikes: number;
   likeTotal: number;
   commentCount: number;
+  favorited: boolean;
 };
 
 export type Comment = {
@@ -29,6 +30,7 @@ export type Comment = {
   photo_id: string;
   user_id: string;
   body: string;
+  parent_id: string | null;
   created_at: string;
 };
 

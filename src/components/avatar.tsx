@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/lib/theme';
+import { colors, themed, useTheme } from '@/lib/theme';
 
 export function Avatar({ uri, name, size = 36 }: { uri: string | null; name: string; size?: number }) {
+  useTheme();
   const radius = size / 2;
   return uri ? (
     <Image
@@ -21,6 +22,6 @@ export function Avatar({ uri, name, size = 36 }: { uri: string | null; name: str
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   fallback: { backgroundColor: colors.placeholder, alignItems: 'center', justifyContent: 'center' },
-});
+}));

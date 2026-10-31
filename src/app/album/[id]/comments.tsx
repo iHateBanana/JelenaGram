@@ -6,9 +6,10 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Loading, Message, useContentWidth } from '@/components/states';
 import { fetchAlbumComments } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { colors } from '@/lib/theme';
+import { colors, themed, useTheme } from '@/lib/theme';
 
 export default function AlbumComments() {
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { nameOf } = useAuth();
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function AlbumComments() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
     flexDirection: 'row',
     gap: 12,
@@ -62,4 +63,4 @@ const styles = StyleSheet.create({
   author: { fontWeight: '700', color: colors.text },
   body: { color: colors.text, marginTop: 2, fontSize: 15 },
   date: { color: colors.muted, fontSize: 12, marginTop: 4 },
-});
+}));

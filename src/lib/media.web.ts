@@ -21,7 +21,7 @@ export async function pickPhotos(): Promise<SourcePhoto[]> {
   if (result.canceled) return [];
   return result.assets.map((a) => ({
     key: a.assetId ?? `${a.fileName ?? 'photo'}-${a.fileSize ?? a.uri.length}`,
-    takenAt: new Date().toISOString(),
+    takenAt: new Date(a.file?.lastModified ?? Date.now()).toISOString(),
     getUri: async () => a.uri,
   }));
 }

@@ -1,21 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ActionBar } from '@/components/action-bar';
 import { Avatar } from '@/components/avatar';
 import { Loading, Message, useContentWidth } from '@/components/states';
 import { deleteAlbum, fetchMyAlbums, syncAlbum, type SyncProgress } from '@/lib/api';
+import { markSeen } from '@/lib/activity';
 import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
 import { listAlbumPhotos, pickPhotos } from '@/lib/media';
-import { colors } from '@/lib/theme';
+import { colors, themed, useTheme } from '@/lib/theme';
 import type { AlbumWithCount } from '@/lib/types';
 
 export default function MyAlbums() {
+  useTheme();
   const { me, signOut } = useAuth();
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (me) markSeen('comments', me).then(() => qc.invalidateQueries({ queryKey: ['activity'] }));
+  }, [me, qc]);
   const router = useRouter();
   const width = useContentWidth();
   const [progress, setProgress] = useState<Record<string, SyncProgress | string>>({});
@@ -124,7 +130,7 @@ export default function MyAlbums() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: {
     gap: 10,
     padding: 14,
@@ -138,4 +144,4 @@ const styles = StyleSheet.create({
   count: { color: colors.muted, fontSize: 14 },
   actions: { flexDirection: 'row', gap: 20, paddingLeft: 68 },
   action: { color: colors.link, fontWeight: '600' },
-});
+}));

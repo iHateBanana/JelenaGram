@@ -1,17 +1,27 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { HeartsProvider } from '@/components/hearts';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { colors } from '@/lib/theme';
+import { BiometricGate } from '@/lib/biometric';
+import { colors, ThemeProvider, useTheme } from '@/lib/theme';
+
+const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000, gcTime: WEEK } },
 });
+
+const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: 'jg.query-cache' });
 
 function RootStack() {
   const { session, loading } = useAuth();
+  useTheme();
 
   if (loading) {
     return (
@@ -37,6 +47,8 @@ function RootStack() {
             title: 'JelenaGram',
           }}
         />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="saved" options={{ title: 'Saved' }} />
         <Stack.Screen name="my-albums" options={{ title: 'My albums' }} />
         <Stack.Screen name="add-album" options={{ title: 'Add album', presentation: 'modal' }} />
         <Stack.Screen name="album/[id]/index" options={{ title: 'Album' }} />
@@ -51,14 +63,25 @@ function RootStack() {
   );
 }
 
+function ThemedStatusBar() {
+  const { scheme } = useTheme();
+  return <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />;
+}
+
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <StatusBar style="dark" />
-        <RootStack />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: WEEK }}>
+        <AuthProvider>
+          <HeartsProvider>
+            <BiometricGate>
+              <ThemedStatusBar />
+              <RootStack />
+            </BiometricGate>
+          </HeartsProvider>
+        </AuthProvider>
+      </PersistQueryClientProvider>
+    </ThemeProvider>
   );
 }
 

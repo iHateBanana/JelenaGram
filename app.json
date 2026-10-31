@@ -38,7 +38,9 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "JelenaGram needs access to your photo albums so you can share them."
+          "photosPermission": "JelenaGram needs access to your photo albums so you can share them.",
+            "savePhotosPermission": "JelenaGram saves photos you choose to your library.",
+            "granularPermissions": ["photo"]
         }
       ],
       [
@@ -50,7 +52,7 @@
     ],
     "experiments": {
       "typedRoutes": false,
-      "reactCompiler": true
+      "reactCompiler": false
     }
   }
 }

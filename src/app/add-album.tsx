@@ -16,9 +16,10 @@ import { createAlbum, deleteAlbum, syncAlbum, type SyncProgress } from '@/lib/ap
 import { useAuth } from '@/lib/auth';
 import { listAlbumPhotos, listDeviceAlbums, pickPhotos, supportsDeviceAlbums } from '@/lib/media';
 import type { DeviceAlbum, SourcePhoto } from '@/lib/media-types';
-import { colors, MAX_CONTENT_WIDTH } from '@/lib/theme';
+import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
 
 export default function AddAlbum() {
+  useTheme();
   const { me } = useAuth();
   const router = useRouter();
   const qc = useQueryClient();
@@ -148,7 +149,7 @@ export default function AddAlbum() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text },
   muted: { color: colors.muted },
@@ -183,4 +184,4 @@ const styles = StyleSheet.create({
   },
   button: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
   buttonText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
-});
+}));

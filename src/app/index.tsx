@@ -1,13 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ActionBar } from '@/components/action-bar';
 import { Post, postLayout } from '@/components/post';
 import { Loading, Message, useContentWidth } from '@/components/states';
 import { fetchFeedAll } from '@/lib/api';
+import { markSeen } from '@/lib/activity';
 import { useAuth } from '@/lib/auth';
+import { colors, themed, useTheme } from '@/lib/theme';
+import { useActivity } from '@/lib/use-activity';
 
 function seededShuffle<T>(items: T[], seed: number): T[] {
   const out = [...items];
@@ -24,7 +27,19 @@ function seededShuffle<T>(items: T[], seed: number): T[] {
 }
 
 export default function Home() {
+  useTheme();
   const { me, otherName } = useAuth();
+  const qc = useQueryClient();
+  const activity = useActivity();
+  const newPhotos = activity.data?.newPhotos ?? 0;
+  const newComments = activity.data?.newComments ?? 0;
+
+  const dismissBanner = async () => {
+    if (!me) return;
+    await markSeen('feed', me);
+    qc.invalidateQueries({ queryKey: ['activity'] });
+  };
+
   const router = useRouter();
   const width = useContentWidth();
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
@@ -55,7 +70,22 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <ActionBar label="My albums" onPress={() => router.push('/my-albums')} />
+      <ActionBar
+        actions={[
+          { label: 'My albums', onPress: () => router.push('/my-albums'), dot: newComments > 0 },
+          { label: 'Saved', onPress: () => router.push('/saved'), secondary: true },
+          { label: 'Settings', onPress: () => router.push('/settings'), secondary: true },
+        ]}
+      />
+      {newPhotos > 0 && (
+        <Pressable style={styles.banner} onPress={dismissBanner} accessibilityRole="button">
+          <Text style={styles.bannerText}>
+            {newPhotos} new photo{newPhotos === 1 ? '' : 's'}
+            {newComments > 0 ? `  ·  ${newComments} new comment${newComments === 1 ? '' : 's'}` : ''}
+            {'  ·  Tap to dismiss'}
+          </Text>
+        </Pressable>
+      )}
       <FlatList
         style={{ width }}
         data={photos}
@@ -66,9 +96,23 @@ export default function Home() {
         onRefresh={async () => {
           const before = new Set(photos.map((p) => p.id));
           const res = await query.refetch();
+          activity.refetch();
           if (res.data?.some((p) => !before.has(p.id))) setSeed(Math.floor(Math.random() * 2 ** 31));
         }}
       />
     </View>
   );
 }
+
+const styles = themed(() => StyleSheet.create({
+  banner: {
+    width: '100%',
+    maxWidth: 600,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: colors.likeTint,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  bannerText: { color: colors.text, fontWeight: '600', fontSize: 14, textAlign: 'center' },
+}));

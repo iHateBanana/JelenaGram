@@ -1,19 +1,49 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, MAX_CONTENT_WIDTH } from '@/lib/theme';
+import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
 
-export function ActionBar({ label, onPress }: { label: string; onPress: () => void }) {
+export type BarAction = { label: string; onPress: () => void; dot?: boolean; secondary?: boolean };
+
+export function ActionBar({ label, onPress, actions }: { label?: string; onPress?: () => void; actions?: BarAction[] }) {
+  useTheme();
+  const items: BarAction[] = actions ?? [{ label: label ?? '', onPress: onPress ?? (() => {}) }];
   return (
     <View style={styles.bar}>
-      <Pressable accessibilityRole="button" style={styles.button} onPress={onPress}>
-        <Text style={styles.text}>{label}</Text>
-      </Pressable>
+      {items.map((a) => (
+        <Pressable
+          key={a.label}
+          accessibilityRole="button"
+          style={[styles.button, a.secondary && styles.secondary]}
+          onPress={a.onPress}>
+          <Text style={[styles.text, a.secondary && styles.secondaryText]}>{a.label}</Text>
+          {a.dot && <View style={styles.dot} />}
+        </Pressable>
+      ))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  bar: { width: '100%', maxWidth: MAX_CONTENT_WIDTH, paddingHorizontal: 16, paddingVertical: 10 },
-  button: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
+const styles = themed(() => StyleSheet.create({
+  bar: {
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  secondary: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   text: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },
-});
+  secondaryText: { color: colors.text },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.dot },
+}));

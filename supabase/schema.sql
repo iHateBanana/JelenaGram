@@ -52,9 +52,24 @@ create table comments (
   photo_id uuid not null references photos(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
   body text not null check (char_length(body) between 1 and 2000),
+  parent_id uuid references comments(id) on delete cascade,
   created_at timestamptz not null default now()
 );
 create index comments_photo_idx on comments (photo_id, created_at);
+
+-- Favorites + rename policy: already have a database? Run supabase/upgrade-2.sql instead.
+create table favorites (
+  photo_id uuid not null references photos(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  created_at timestamptz not null default now(),
+  primary key (photo_id, user_id)
+);
+alter table favorites enable row level security;
+create policy "read own favorites" on favorites for select using (user_id = auth.uid());
+create policy "add own favorite" on favorites for insert with check (is_allowed() and user_id = auth.uid());
+create policy "remove own favorite" on favorites for delete using (user_id = auth.uid());
+create policy "update own name" on allowed_users for update
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- Adds n likes for the current user on a photo.
 create or replace function add_likes(p_photo uuid, n int default 1) returns int

@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useWindowDimensions } from 'react-native';
 
-import { colors, MAX_CONTENT_WIDTH } from '@/lib/theme';
+import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
 
 export function useContentWidth() {
   const { width } = useWindowDimensions();
@@ -9,6 +9,7 @@ export function useContentWidth() {
 }
 
 export function Loading() {
+  useTheme();
   return (
     <View style={styles.center}>
       <ActivityIndicator />
@@ -27,6 +28,7 @@ export function Message({
   action?: string;
   onAction?: () => void;
 }) {
+  useTheme();
   return (
     <View style={styles.center}>
       <Text style={styles.title}>{title}</Text>
@@ -40,10 +42,10 @@ export function Message({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text, textAlign: 'center' },
   body: { color: colors.muted, textAlign: 'center' },
   btn: { marginTop: 8, backgroundColor: colors.accent, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
   btnText: { color: colors.onAccent, fontWeight: '700' },
-});
+}));

@@ -50,12 +50,15 @@ async function enrichPhotos(rows: RawPhoto[], me: string): Promise<Photo[]> {
   const ids = rows.map((r) => r.id);
   const urls = await signUrls(rows.flatMap((r) => [r.path, r.album.cover_path]));
 
-  const [likesRes, commentsRes] = await Promise.all([
+  const [likesRes, commentsRes, favRes] = await Promise.all([
     supabase.from('likes').select('photo_id, user_id, count').in('photo_id', ids),
     supabase.from('comments').select('photo_id').in('photo_id', ids),
+    supabase.from('favorites').select('photo_id').eq('user_id', me).in('photo_id', ids),
   ]);
   if (likesRes.error) throw likesRes.error;
   if (commentsRes.error) throw commentsRes.error;
+  if (favRes.error) throw favRes.error;
+  const favSet = new Set((favRes.data ?? []).map((f) => f.photo_id));
 
   const likes: Record<string, Record<string, number>> = {};
   for (const l of likesRes.data ?? []) {
@@ -81,6 +84,7 @@ async function enrichPhotos(rows: RawPhoto[], me: string): Promise<Photo[]> {
       myLikes: byUser[me] ?? 0,
       likeTotal: Object.values(byUser).reduce((a, b) => a + b, 0),
       commentCount: commentCounts[r.id] ?? 0,
+      favorited: favSet.has(r.id),
     };
   });
 }
@@ -166,7 +170,7 @@ export async function addLike(photoId: string): Promise<number> {
 export async function fetchComments(photoId: string): Promise<Comment[]> {
   const { data, error } = await supabase
     .from('comments')
-    .select('id, photo_id, user_id, body, created_at')
+    .select('id, photo_id, user_id, body, parent_id, created_at')
     .eq('photo_id', photoId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -178,7 +182,7 @@ export type AlbumComment = Comment & { photoUrl: string };
 export async function fetchAlbumComments(albumId: string): Promise<AlbumComment[]> {
   const { data, error } = await supabase
     .from('comments')
-    .select('id, photo_id, user_id, body, created_at, photo:photos!inner(path, album_id)')
+    .select('id, photo_id, user_id, body, parent_id, created_at, photo:photos!inner(path, album_id)')
     .eq('photo.album_id', albumId)
     .order('created_at', { ascending: false })
     .limit(300)
@@ -189,8 +193,8 @@ export async function fetchAlbumComments(albumId: string): Promise<AlbumComment[
   return rows.map(({ photo, ...c }) => ({ ...c, photoUrl: urls[photo.path] ?? '' }));
 }
 
-export async function addComment(photoId: string, body: string): Promise<void> {
-  const { error } = await supabase.from('comments').insert({ photo_id: photoId, body: body.trim() });
+export async function addComment(photoId: string, body: string, parentId: string | null = null): Promise<void> {
+  const { error } = await supabase.from('comments').insert({ photo_id: photoId, body: body.trim(), parent_id: parentId });
   if (error) throw error;
 }
 
@@ -335,4 +339,53 @@ export async function syncAlbum(
     onProgress?.({ done, total: todo.length });
   }
   return todo.length;
+}
+
+
+export async function setFavorite(photoId: string, me: string, on: boolean): Promise<void> {
+  const { error } = on
+    ? await supabase.from('favorites').upsert({ photo_id: photoId, user_id: me }, { onConflict: 'photo_id,user_id' })
+    : await supabase.from('favorites').delete().eq('photo_id', photoId).eq('user_id', me);
+  if (error) throw error;
+}
+
+export async function fetchFavorites(me: string): Promise<Photo[]> {
+  const { data, error } = await supabase
+    .from('favorites')
+    .select(`created_at, photo:photos!inner(${PHOTO_SELECT})`)
+    .eq('user_id', me)
+    .order('created_at', { ascending: false })
+    .limit(300)
+    .overrideTypes<{ created_at: string; photo: RawPhoto }[]>();
+  if (error) throw error;
+  return enrichPhotos((data ?? []).map((r) => r.photo), me);
+}
+
+export async function updateDisplayName(me: string, name: string): Promise<void> {
+  const { error } = await supabase.from('allowed_users').update({ display_name: name.trim() }).eq('user_id', me);
+  if (error) throw error;
+}
+
+export async function updatePassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+}
+
+export type Activity = { newPhotos: number; newComments: number };
+
+export async function fetchActivity(me: string, feedSeen: string, commentsSeen: string): Promise<Activity> {
+  const [photos, comments] = await Promise.all([
+    supabase
+      .from('photos')
+      .select('id, album:albums!inner(owner_id)', { count: 'exact', head: true })
+      .neq('album.owner_id', me)
+      .gt('created_at', feedSeen),
+    supabase
+      .from('comments')
+      .select('id, photo:photos!inner(album:albums!inner(owner_id))', { count: 'exact', head: true })
+      .eq('photo.album.owner_id', me)
+      .neq('user_id', me)
+      .gt('created_at', commentsSeen),
+  ]);
+  return { newPhotos: photos.count ?? 0, newComments: comments.count ?? 0 };
 }

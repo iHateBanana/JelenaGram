@@ -3,13 +3,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
-import { addLike, deletePhoto } from '@/lib/api';
+import { useHearts } from '@/components/hearts';
+import { addLike, deletePhoto, setFavorite } from '@/lib/api';
+import { savePhoto } from '@/lib/save-photo';
 import { useAuth } from '@/lib/auth';
 import { confirm } from '@/lib/confirm';
-import { colors } from '@/lib/theme';
+import { colors, themed, useTheme } from '@/lib/theme';
 import type { Photo } from '@/lib/types';
 
 export const POST_HEADER = 56;
@@ -42,7 +44,10 @@ export function postLayout(photos: Photo[], width: number) {
 }
 
 export function Post({ photo, width }: { photo: Photo; width: number }) {
+  useTheme();
   const router = useRouter();
+  const hearts = useHearts();
+  const likeRef = useRef<React.ElementRef<typeof Pressable>>(null);
   const qc = useQueryClient();
   const { nameOf, me } = useAuth();
   const [mine, setMine] = useState(photo.myLikes);
@@ -68,7 +73,32 @@ export function Post({ photo, width }: { photo: Photo; width: number }) {
   const others = photo.likeTotal - photo.myLikes;
   const total = others + mine;
 
+  const [fav, setFav] = useState(photo.favorited);
+  useEffect(() => setFav(photo.favorited), [photo.favorited]);
+
+  const toggleFav = async () => {
+    const next = !fav;
+    setFav(next);
+    try {
+      await setFavorite(photo.id, me!, next);
+      qc.invalidateQueries({ queryKey: ['favorites'] });
+    } catch {
+      setFav(!next);
+    }
+  };
+
+  const download = async () => {
+    try {
+      const res = await savePhoto(photo.url, `jelenagram-${photo.id.slice(0, 8)}`);
+      if (res === 'denied') Alert.alert('Permission needed', 'Allow photo access in Settings to save pictures.');
+      else if (Platform.OS !== 'web') Alert.alert('Saved', 'The photo is in your Photos library.');
+    } catch (e) {
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Try again.');
+    }
+  };
+
   const onLike = async () => {
+    likeRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => hearts.burst(x + w / 2, y + h / 2));
     setMine((n) => n + 1);
     inflight.current += 1;
     try {
@@ -108,12 +138,13 @@ export function Post({ photo, width }: { photo: Photo; width: number }) {
         )}
       </View>
       <View style={{ width: innerWidth, height: innerWidth * frameRatio(photo), backgroundColor: colors.placeholder }}>
-        <Image source={{ uri: photo.url }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={40} />
-        <Image source={{ uri: photo.url }} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
+        <Image source={{ uri: photo.url, cacheKey: photo.path }} cachePolicy="memory-disk" style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={40} />
+        <Image source={{ uri: photo.url, cacheKey: photo.path }} cachePolicy="memory-disk" style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
       </View>
       <View style={styles.footer}>
         <View style={styles.actions}>
           <Pressable
+            ref={likeRef}
             onPress={onLike}
             hitSlop={8}
             accessibilityLabel="Like"
@@ -127,6 +158,13 @@ export function Post({ photo, width }: { photo: Photo; width: number }) {
           </Pressable>
           <Pressable onPress={openComments} hitSlop={8} accessibilityLabel="Comments" style={styles.pill}>
             <MaterialIcons name="chat-bubble-outline" size={22} color={colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={toggleFav} hitSlop={8} accessibilityLabel={fav ? 'Remove from saved' : 'Save to favorites'} style={styles.iconBtn}>
+            <MaterialIcons name={fav ? 'bookmark' : 'bookmark-border'} size={24} color={fav ? colors.like : colors.text} />
+          </Pressable>
+          <Pressable onPress={download} hitSlop={8} accessibilityLabel="Save photo" style={styles.iconBtn}>
+            <MaterialIcons name="file-download" size={24} color={colors.text} />
           </Pressable>
         </View>
         <Text style={styles.likes} numberOfLines={1}>
@@ -146,7 +184,7 @@ export function Post({ photo, width }: { photo: Photo; width: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: colors.card,
@@ -179,7 +217,7 @@ const styles = StyleSheet.create({
   albumName: { fontSize: 15, fontWeight: '600', color: colors.text, flexShrink: 1 },
   footer: { height: POST_FOOTER, paddingHorizontal: 12, paddingTop: 6 },
   actions: { flexDirection: 'row', gap: 10, height: 40, alignItems: 'center' },
-  icon: { fontSize: 20 },
+  iconBtn: { height: 34, width: 34, alignItems: 'center', justifyContent: 'center' },
   likes: { fontSize: 14, fontWeight: '600', color: colors.text, height: 22 },
   commentLink: { fontSize: 14, color: colors.muted, height: 22 },
-});
+}));
