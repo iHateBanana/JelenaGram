@@ -11,7 +11,7 @@ const HEAD = `<meta name="apple-mobile-web-app-title" content="JelenaGram"/>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="icon" href="/favicon.png"/>
 <link rel="manifest" href="/manifest.json"/>
-<style>:root{--forest:#2A5C47;--sage:#CFE5D6;--lavender:#A590CF;--lilac:#E6DAF5;--plum:#5E4580;--moonlight:#FBF7F1;--ink:#2B2236;--surface:#FFFFFF;--radius-sm:16px;--radius-card:24px;--radius-pill:999px}:focus-visible{outline:2px solid var(--plum);outline-offset:2px}html,body{background-color:#FBF7F1;overscroll-behavior:none;-webkit-text-size-adjust:100%}body{-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}input,textarea{font-size:16px !important}#root{padding-top:env(safe-area-inset-top);box-sizing:border-box}</style>`;
+<style>:root{--forest:#2A5C47;--sage:#CFE5D6;--lavender:#A590CF;--lilac:#E6DAF5;--plum:#5E4580;--moonlight:#FBF7F1;--ink:#2B2236;--surface:#FFFFFF;--radius-sm:16px;--radius-card:24px;--radius-pill:999px}:focus-visible{outline:2px solid var(--plum);outline-offset:2px}html,body{background-color:#FBF7F1;overscroll-behavior:none;-webkit-text-size-adjust:100%}body{-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}input,textarea{font-size:16px !important}#root{padding-top:env(safe-area-inset-top);box-sizing:border-box}@media (hover:none) and (pointer:coarse){#root{padding-top:calc(env(safe-area-inset-top) + 28px)}}</style>`;
 
 function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
