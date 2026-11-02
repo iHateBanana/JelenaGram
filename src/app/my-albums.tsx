@@ -112,14 +112,14 @@ export default function MyAlbums() {
               </Pressable>
               <View style={styles.actions}>
                 {canSync && (
-                  <Pressable onPress={() => sync(item)} disabled={typeof p === 'object'}>
+                  <Pressable style={styles.actionBtn} onPress={() => sync(item)} disabled={typeof p === 'object'}>
                     <Text style={styles.action}>{item.source_album_id ? 'Sync' : 'Add photos'}</Text>
                   </Pressable>
                 )}
-                <Pressable onPress={() => router.push({ pathname: '/album/[id]/comments', params: { id: item.id } })}>
+                <Pressable style={styles.actionBtn} onPress={() => router.push({ pathname: '/album/[id]/comments', params: { id: item.id } })}>
                   <Text style={styles.action}>Comments</Text>
                 </Pressable>
-                <Pressable onPress={() => remove.mutate(item)}>
+                <Pressable style={styles.actionBtn} onPress={() => remove.mutate(item)}>
                   <Text style={[styles.action, { color: colors.link }]}>Remove</Text>
                 </Pressable>
               </View>
@@ -143,6 +143,7 @@ const styles = themed(() => StyleSheet.create({
   info: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   name: { fontSize: 16, fontWeight: '600', color: colors.text },
   count: { color: colors.muted, fontSize: 14 },
-  actions: { flexDirection: 'row', gap: 20, paddingLeft: 68 },
-  action: { color: colors.link, fontWeight: '600' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  actionBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.likeTint, alignItems: 'center', justifyContent: 'center' },
+  action: { color: colors.text, fontWeight: '700', fontSize: 15 },
 }));
