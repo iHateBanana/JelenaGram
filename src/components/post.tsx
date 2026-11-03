@@ -98,8 +98,20 @@ export function Post({ photo, width }: { photo: Photo; width: number }) {
     }
   };
 
-  const onLike = async () => {
-    likeRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => hearts.burst(x + w / 2, y + h / 2));
+  const lastTap = useRef(0);
+  const onPhotoPress = (e: { nativeEvent: { pageX?: number; pageY?: number } }) => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      lastTap.current = 0;
+      void onLike({ x: e.nativeEvent.pageX ?? 0, y: e.nativeEvent.pageY ?? 0 });
+    } else {
+      lastTap.current = now;
+    }
+  };
+
+  const onLike = async (at?: { x: number; y: number }) => {
+    if (at) hearts.burst(at.x, at.y);
+    else likeRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => hearts.burst(x + w / 2, y + h / 2));
     setMine((n) => n + 1);
     inflight.current += 1;
     try {
@@ -138,15 +150,18 @@ export function Post({ photo, width }: { photo: Photo; width: number }) {
           </Pressable>
         )}
       </View>
-      <View style={{ width: innerWidth, height: innerWidth * frameRatio(photo), backgroundColor: colors.placeholder }}>
+      <Pressable
+        onPress={onPhotoPress}
+        accessibilityLabel="Double tap to like"
+        style={{ width: innerWidth, height: innerWidth * frameRatio(photo), backgroundColor: colors.placeholder }}>
         <Image source={{ uri: photo.url, cacheKey: photo.path }} cachePolicy="memory-disk" style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={40} />
         <Image source={{ uri: photo.url, cacheKey: photo.path }} cachePolicy="memory-disk" style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
-      </View>
+      </Pressable>
       <View style={styles.footer}>
         <View style={styles.actions}>
           <Pressable
             ref={likeRef}
-            onPress={onLike}
+            onPress={() => onLike()}
             hitSlop={8}
             accessibilityLabel="Like"
             style={[styles.pill, mine > 0 && styles.pillActive]}
