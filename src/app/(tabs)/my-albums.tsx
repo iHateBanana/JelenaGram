@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/text';
 
@@ -17,12 +17,15 @@ import type { AlbumWithCount } from '@/lib/types';
 
 export default function MyAlbums() {
   useTheme();
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
   const qc = useQueryClient();
 
-  useEffect(() => {
-    if (me) markSeen('comments', me).then(() => qc.invalidateQueries({ queryKey: ['activity'] }));
-  }, [me, qc]);
+  // On focus, not mount: tab screens stay mounted, so this has to run on every visit.
+  useFocusEffect(
+    useCallback(() => {
+      if (me) markSeen('comments', me).then(() => qc.invalidateQueries({ queryKey: ['activity'] }));
+    }, [me, qc]),
+  );
   const router = useRouter();
   const width = useContentWidth();
   const [progress, setProgress] = useState<Record<string, SyncProgress | string>>({});
@@ -49,11 +52,13 @@ export default function MyAlbums() {
     try {
       const sources = album.source_album_id ? await listAlbumPhotos(album.source_album_id) : await pickPhotos();
       if (sources.length === 0) return;
-      await syncAlbum(album, sources, (p) => setProgress((s) => ({ ...s, [album.id]: p })));
-      setProgress((s) => {
-        const { [album.id]: _done, ...rest } = s;
-        return rest;
-      });
+      const { uploaded, failed } = await syncAlbum(album, sources, (p) => setProgress((s) => ({ ...s, [album.id]: p })));
+      const result = failed > 0
+        ? `Added ${uploaded}. ${failed} could not upload, so try again.`
+        : uploaded === 0
+          ? 'Nothing new to add'
+          : `Added ${uploaded} photo${uploaded === 1 ? '' : 's'}`;
+      setProgress((s) => ({ ...s, [album.id]: result }));
     } catch (e) {
       setProgress((s) => ({ ...s, [album.id]: (e as Error).message }));
     } finally {
@@ -82,20 +87,14 @@ export default function MyAlbums() {
             onAction={() => router.push('/add-album')}
           />
         }
-        ListFooterComponent={
-          <Pressable onPress={signOut} style={{ alignSelf: 'center', padding: 12 }}>
-            <Text style={{ color: colors.muted }}>Log out</Text>
-          </Pressable>
-        }
         renderItem={({ item }) => {
           const p = progress[item.id];
-          const canSync = true;
           return (
             <View style={styles.row}>
               <Pressable
                 style={styles.info}
                 onPress={() => router.push({ pathname: '/album/[id]', params: { id: item.id } })}>
-                <Avatar uri={item.coverUrl} name={item.name} size={56} />
+                <Avatar uri={item.coverUrl} cacheKey={item.coverKey} name={item.name} size={56} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name} numberOfLines={1}>
                     {item.name}
@@ -111,11 +110,9 @@ export default function MyAlbums() {
                 </View>
               </Pressable>
               <View style={styles.actions}>
-                {canSync && (
-                  <Pressable style={styles.actionBtn} onPress={() => sync(item)} disabled={typeof p === 'object'}>
-                    <Text style={styles.action}>{item.source_album_id ? 'Sync' : 'Add photos'}</Text>
-                  </Pressable>
-                )}
+                <Pressable style={styles.actionBtn} onPress={() => sync(item)} disabled={typeof p === 'object'}>
+                  <Text style={styles.action}>{item.source_album_id ? 'Sync' : 'Add photos'}</Text>
+                </Pressable>
                 <Pressable style={styles.actionBtn} onPress={() => router.push({ pathname: '/album/[id]/comments', params: { id: item.id } })}>
                   <Text style={styles.action}>Comments</Text>
                 </Pressable>

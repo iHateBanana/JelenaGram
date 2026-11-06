@@ -4,12 +4,24 @@ import { Text } from '@/components/text';
 
 import { colors, themed, useTheme } from '@/lib/theme';
 
-export function Avatar({ uri, name, size = 36 }: { uri: string | null; name: string; size?: number }) {
+export function Avatar({
+  uri,
+  cacheKey,
+  name,
+  size = 36,
+}: {
+  uri: string | null;
+  /** Storage path. Signed URLs change over time; caching by path keeps the image cached on disk. */
+  cacheKey?: string | null;
+  name: string;
+  size?: number;
+}) {
   useTheme();
   const radius = size / 2;
   return uri ? (
     <Image
-      source={{ uri }}
+      source={{ uri, cacheKey: cacheKey ?? undefined }}
+      cachePolicy="memory-disk"
       style={{ width: size, height: size, borderRadius: radius, backgroundColor: colors.placeholder }}
       contentFit="cover"
     />

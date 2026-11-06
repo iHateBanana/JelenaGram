@@ -1,16 +1,17 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, FlatList, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { fonts, Text } from '@/components/text';
 
+import { ActionSheet, type SheetOption } from '@/components/action-sheet';
 import { Avatar } from '@/components/avatar';
-import { Loading, Message, useContentWidth } from '@/components/states';
-import { deletePhoto, fetchAlbum, fetchAlbumPhotos, setAlbumCover, syncAlbum, type SyncProgress } from '@/lib/api';
+import { GridSkeleton, Message, useContentWidth } from '@/components/states';
+import { deletePhotos, fetchAlbum, fetchAlbumPhotos, setAlbumCover, syncAlbum, type SyncProgress } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { confirm } from '@/lib/confirm';
+import { confirm, notify } from '@/lib/confirm';
 import { downloadAlbumZip, supportsZip } from '@/lib/export-zip';
 import { pickPhotos } from '@/lib/media';
 import { palette, colors, themed, useTheme } from '@/lib/theme';
@@ -42,10 +43,48 @@ function buildRows(photos: Photo[], timeline: boolean): Row[] {
   return rows;
 }
 
-function notify(msg: string) {
-  if (Platform.OS === 'web') window.alert(msg);
-  else Alert.alert(msg);
-}
+const RowGap = () => <View style={{ height: GAP }} />;
+
+/** Memoized so selecting one photo doesn't re-render every photo on screen. */
+const GridTile = memo(function GridTile({
+  photo,
+  index,
+  size,
+  selecting,
+  on,
+  onPress,
+  onLongPress,
+}: {
+  photo: Photo;
+  index: number;
+  size: number;
+  selecting: boolean;
+  on: boolean;
+  onPress: (photoId: string, index: number) => void;
+  onLongPress?: (photoId: string) => void;
+}) {
+  useTheme();
+  return (
+    <Pressable
+      onPress={() => onPress(photo.id, index)}
+      onLongPress={onLongPress ? () => onLongPress(photo.id) : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={selecting ? (on ? 'Selected photo' : 'Select photo') : 'Open photo'}>
+      <Image
+        source={{ uri: photo.thumbUrl ?? photo.url, cacheKey: photo.thumbKey }}
+        cachePolicy="memory-disk"
+        style={{ width: size, height: size, backgroundColor: colors.placeholder, opacity: on ? 0.55 : 1 }}
+        contentFit="cover"
+        recyclingKey={photo.id}
+      />
+      {selecting && (
+        <View style={[styles.check, on && styles.checkOn]}>
+          {on && <MaterialIcons name="check" size={16} color={colors.onAccent} />}
+        </View>
+      )}
+    </Pressable>
+  );
+});
 
 export default function AlbumProfile() {
   useTheme();
@@ -61,6 +100,7 @@ export default function AlbumProfile() {
   const [uploading, setUploading] = useState<SyncProgress | null>(null);
   const [exporting, setExporting] = useState<number | null>(null);
   const [working, setWorking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const album = useQuery({ queryKey: ['album', id], queryFn: () => fetchAlbum(id), enabled: !!id });
   const photos = useQuery({
@@ -80,12 +120,25 @@ export default function AlbumProfile() {
     setSelected(new Set());
   };
 
-  const toggle = (pid: string) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      if (!next.delete(pid)) next.add(pid);
-      return next;
-    });
+  const onTilePress = useCallback(
+    (photoId: string, index: number) => {
+      if (!selecting) {
+        router.push({ pathname: '/album/[id]/feed', params: { id, start: String(index) } });
+        return;
+      }
+      setSelected((s) => {
+        const next = new Set(s);
+        if (!next.delete(photoId)) next.add(photoId);
+        return next;
+      });
+    },
+    [selecting, router, id],
+  );
+
+  const onTileLongPress = useCallback((photoId: string) => {
+    setSelecting(true);
+    setSelected((s) => new Set(s).add(photoId));
+  }, []);
 
   const removeSelected = async () => {
     const chosen = (photos.data ?? []).filter((p) => selected.has(p.id));
@@ -98,9 +151,9 @@ export default function AlbumProfile() {
     if (!ok) return;
     setWorking(true);
     try {
-      for (const p of chosen) await deletePhoto(p);
+      await deletePhotos(chosen);
     } catch (e) {
-      notify((e as Error).message);
+      notify('Could not remove photos', (e as Error).message);
     } finally {
       setWorking(false);
       exitSelect();
@@ -115,7 +168,7 @@ export default function AlbumProfile() {
     try {
       await setAlbumCover(id, photo.path);
     } catch (e) {
-      notify((e as Error).message);
+      notify('Could not set the cover', (e as Error).message);
     } finally {
       setWorking(false);
       exitSelect();
@@ -129,10 +182,11 @@ export default function AlbumProfile() {
       const sources = await pickPhotos();
       if (sources.length === 0) return;
       setUploading({ done: 0, total: sources.length });
-      await syncAlbum(album.data, sources, setUploading);
+      const { failed } = await syncAlbum(album.data, sources, setUploading);
       invalidateAll();
+      if (failed > 0) notify(`${failed} photo${failed === 1 ? '' : 's'} could not upload`, 'Check your connection and try adding them again.');
     } catch (e) {
-      notify((e as Error).message);
+      notify('Could not add photos', (e as Error).message);
     } finally {
       setUploading(null);
     }
@@ -145,13 +199,13 @@ export default function AlbumProfile() {
       const files = photos.data.map((p, i) => ({ url: p.url, name: `${String(i + 1).padStart(3, '0')}.jpg` }));
       await downloadAlbumZip(album.data.name, files, setExporting);
     } catch (e) {
-      notify((e as Error).message);
+      notify('Could not create the zip', (e as Error).message);
     } finally {
       setExporting(null);
     }
   };
 
-  if (album.isPending || photos.isPending) return <Loading />;
+  if (album.isPending || photos.isPending) return <GridSkeleton columns={COLUMNS} gap={GAP} />;
   if (album.isError || photos.isError) {
     return (
       <Message
@@ -171,50 +225,58 @@ export default function AlbumProfile() {
   const isOwner = a.owner_id === me;
   const count = selected.size;
 
+  const menu: SheetOption[] = [
+    ...(isOwner ? [{ label: 'Select photos', onPress: () => setSelecting(true) }] : []),
+    ...(supportsZip ? [{ label: 'Download zip', onPress: exportZip }] : []),
+  ];
+
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Stack.Screen options={{ title: a.name }} />
+      <Stack.Screen
+        options={{
+          title: a.name,
+          headerRight: selecting
+            ? () => (
+                <Pressable onPress={exitSelect} accessibilityRole="button" style={styles.headerBtn}>
+                  <Text style={styles.headerBtnText}>Cancel</Text>
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <FlatList
         style={{ width }}
         data={rows}
         keyExtractor={(r) => r.key}
+        windowSize={5}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
         ListHeaderComponent={
           <View>
-            {selecting && (
-              <Text style={styles.pickHint}>
-                {count === 0 ? 'Tap photos to select them.' : `${count} selected`}
-              </Text>
-            )}
             <View style={styles.header}>
-              <Avatar uri={a.coverUrl} name={a.name} size={86} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name} numberOfLines={2}>
-                  {a.name}
-                </Text>
+              <Avatar uri={a.coverUrl} cacheKey={a.coverKey} name={a.name} size={72} />
+              <View style={{ flex: 1, gap: 10 }}>
                 <Text style={styles.count}>
                   <Text style={styles.countNum}>{a.photoCount}</Text> {a.photoCount === 1 ? 'post' : 'posts'}
+                  {exporting !== null ? `  ·  Zipping ${exporting}/${photos.data.length}…` : ''}
                 </Text>
-                <View style={styles.links}>
-                  <Pressable onPress={() => router.push({ pathname: '/album/[id]/comments', params: { id: a.id } })}>
-                    <Text style={styles.link}>All comments</Text>
+                <View style={styles.buttons}>
+                  {isOwner && (
+                    <Pressable style={[styles.btn, styles.btnMain]} disabled={!!uploading} onPress={addPhotos} accessibilityRole="button">
+                      <Text style={styles.btnMainText} numberOfLines={1}>
+                        {uploading ? `Uploading ${uploading.done}/${uploading.total}…` : 'Add photos'}
+                      </Text>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    style={styles.btn}
+                    onPress={() => router.push({ pathname: '/album/[id]/comments', params: { id: a.id } })}
+                    accessibilityRole="button">
+                    <Text style={styles.btnText}>Comments</Text>
                   </Pressable>
-                  {isOwner && (
-                    <Pressable disabled={!!uploading} onPress={addPhotos}>
-                      <Text style={styles.link}>
-                        {uploading ? `Uploading ${uploading.done} of ${uploading.total}…` : 'Add photos'}
-                      </Text>
-                    </Pressable>
-                  )}
-                  {isOwner && (
-                    <Pressable onPress={() => (selecting ? exitSelect() : setSelecting(true))}>
-                      <Text style={styles.link}>{selecting ? 'Cancel' : 'Select'}</Text>
-                    </Pressable>
-                  )}
-                  {supportsZip && (
-                    <Pressable disabled={exporting !== null} onPress={exportZip}>
-                      <Text style={styles.link}>
-                        {exporting !== null ? `Zipping ${exporting}/${photos.data.length}…` : 'Download zip'}
-                      </Text>
+                  {menu.length > 0 && (
+                    <Pressable style={styles.moreBtn} onPress={() => setMenuOpen(true)} accessibilityRole="button" accessibilityLabel="More options">
+                      <MaterialIcons name="more-horiz" size={22} color={colors.text} />
                     </Pressable>
                   )}
                 </View>
@@ -237,37 +299,24 @@ export default function AlbumProfile() {
           </View>
         }
         ListEmptyComponent={<Message title="No photos yet" />}
-        ItemSeparatorComponent={() => <View style={{ height: GAP }} />}
+        ItemSeparatorComponent={RowGap}
         renderItem={({ item: row }) =>
           row.header ? (
             <Text style={styles.month}>{row.header}</Text>
           ) : (
             <View style={{ flexDirection: 'row', gap: GAP }}>
-              {row.tiles!.map(({ photo, index }) => {
-                const on = selected.has(photo.id);
-                return (
-                  <Pressable
-                    key={photo.id}
-                    onPress={() =>
-                      selecting
-                        ? toggle(photo.id)
-                        : router.push({ pathname: '/album/[id]/feed', params: { id: a.id, start: String(index) } })
-                    }>
-                    <Image
-                      source={{ uri: photo.url, cacheKey: photo.path }}
-                      cachePolicy="memory-disk"
-                      style={{ width: tile, height: tile, backgroundColor: colors.placeholder, opacity: on ? 0.55 : 1 }}
-                      contentFit="cover"
-                      recyclingKey={photo.id}
-                    />
-                    {selecting && (
-                      <View style={[styles.check, on && styles.checkOn]}>
-                        {on && <MaterialIcons name="check" size={16} color={colors.onAccent} />}
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
+              {row.tiles!.map(({ photo, index }) => (
+                <GridTile
+                  key={photo.id}
+                  photo={photo}
+                  index={index}
+                  size={tile}
+                  selecting={selecting}
+                  on={selected.has(photo.id)}
+                  onPress={onTilePress}
+                  onLongPress={isOwner ? onTileLongPress : undefined}
+                />
+              ))}
             </View>
           )
         }
@@ -279,32 +328,40 @@ export default function AlbumProfile() {
       />
       {selecting && (
         <View style={styles.bulkBar}>
-          <Pressable
-            style={[styles.bulkBtn, (count !== 1 || working) && styles.disabled]}
-            disabled={count !== 1 || working}
-            onPress={coverFromSelected}>
-            <Text style={styles.bulkText}>Set as cover</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.bulkBtn, styles.bulkDanger, (count === 0 || working) && styles.disabled]}
-            disabled={count === 0 || working}
-            onPress={removeSelected}>
-            <Text style={[styles.bulkText, { color: colors.dot }]}>{count ? `Remove (${count})` : 'Remove'}</Text>
-          </Pressable>
+          <Text style={styles.bulkCount}>{count === 0 ? 'Tap photos to select them' : `${count} selected`}</Text>
+          <View style={styles.bulkButtons}>
+            <Pressable
+              style={[styles.bulkBtn, (count !== 1 || working) && styles.disabled]}
+              disabled={count !== 1 || working}
+              onPress={coverFromSelected}>
+              <Text style={styles.bulkText}>Set as cover</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.bulkBtn, styles.bulkDanger, (count === 0 || working) && styles.disabled]}
+              disabled={count === 0 || working}
+              onPress={removeSelected}>
+              <Text style={[styles.bulkText, { color: colors.dot }]}>{count ? `Remove (${count})` : 'Remove'}</Text>
+            </Pressable>
+          </View>
         </View>
       )}
+      <ActionSheet visible={menuOpen} options={menu} onClose={() => setMenuOpen(false)} />
     </View>
   );
 }
 
 const styles = themed(() => StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 20, padding: 16 },
-  name: { fontSize: 28, lineHeight: 31, fontFamily: fonts.heading, color: colors.text },
-  count: { marginTop: 4, color: colors.muted, fontSize: 15 },
-  countNum: { fontWeight: '700', color: colors.text },
-  links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 2 },
-  link: { marginTop: 8, color: colors.link, fontWeight: '600' },
-  pickHint: { backgroundColor: colors.likeTint, color: colors.text, padding: 12, textAlign: 'center', fontWeight: '600' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16 },
+  count: { color: colors.muted, fontSize: 15 },
+  countNum: { fontSize: 15, fontWeight: '700', color: colors.text },
+  buttons: { flexDirection: 'row', gap: 8 },
+  btn: { flexGrow: 1, flexShrink: 1, minHeight: 44, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.likeTint, alignItems: 'center', justifyContent: 'center' },
+  btnText: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  btnMain: { backgroundColor: colors.accent },
+  btnMainText: { color: colors.onAccent, fontSize: 14, fontWeight: '700' },
+  moreBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.likeTint, alignItems: 'center', justifyContent: 'center' },
+  headerBtn: { minHeight: 44, paddingHorizontal: 16, justifyContent: 'center' },
+  headerBtnText: { color: colors.link, fontSize: 16, fontWeight: '700' },
   toggle: {
     flexDirection: 'row',
     alignSelf: 'center',
@@ -316,7 +373,7 @@ const styles = themed(() => StyleSheet.create({
   },
   toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 16, backgroundColor: colors.card },
   toggleOn: { backgroundColor: colors.accent },
-  toggleText: { color: colors.text, fontWeight: '600' },
+  toggleText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   month: { color: colors.text, fontFamily: fonts.headingRegular, fontSize: 18, paddingHorizontal: 12, paddingTop: 14, paddingBottom: 6 },
   check: {
     position: 'absolute',
@@ -333,7 +390,6 @@ const styles = themed(() => StyleSheet.create({
   },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   bulkBar: {
-    flexDirection: 'row',
     gap: 10,
     width: '100%',
     maxWidth: 600,
@@ -343,6 +399,8 @@ const styles = themed(() => StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.border,
   },
+  bulkCount: { color: colors.text, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  bulkButtons: { flexDirection: 'row', gap: 10 },
   bulkBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: 999, minHeight: 48, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   bulkDanger: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.dot },
   bulkText: { color: colors.onAccent, fontWeight: '700', fontSize: 16 },

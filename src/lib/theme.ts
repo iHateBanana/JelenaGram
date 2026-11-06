@@ -12,6 +12,8 @@ export const palette = {
   moonlight: '#FBF7F1',
   ink: '#2B2236',
   surface: '#FFFFFF',
+  rose: '#D6336C',
+  blush: '#F7A8C0',
 };
 
 export const radius = { sm: 16, card: 24, pill: 999 };
@@ -27,7 +29,7 @@ const light = {
   forest: palette.forest,
   onForest: palette.moonlight,
   link: palette.plum,
-  like: palette.lavender,
+  like: palette.rose,
   likeTint: palette.lilac,
   placeholder: palette.lilac,
   card: palette.surface,
@@ -45,7 +47,7 @@ const dark: typeof light = {
   forest: palette.forest,
   onForest: palette.moonlight,
   link: '#CDBDEA',
-  like: palette.lavender,
+  like: '#FF7AA2',
   likeTint: '#3A2F4D',
   placeholder: '#33284A',
   card: palette.ink,

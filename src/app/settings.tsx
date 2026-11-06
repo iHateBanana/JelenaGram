@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text, TextInput } from '@/components/text';
 
 import { updateDisplayName, updatePassword } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { notify } from '@/lib/confirm';
 import { biometricAvailable, getBiometricEnabled, setBiometricEnabled } from '@/lib/biometric';
 import { colors, MAX_CONTENT_WIDTH, themed, useTheme, type SchemePreference } from '@/lib/theme';
 
@@ -13,11 +14,6 @@ const MODES: { value: SchemePreference; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
-
-function notify(title: string, body?: string) {
-  if (Platform.OS === 'web') window.alert(body ? `${title}\n${body}` : title);
-  else Alert.alert(title, body);
-}
 
 export default function Settings() {
   const { preference, setPreference } = useTheme();
@@ -39,17 +35,15 @@ export default function Settings() {
     getBiometricEnabled().then(setBioOn);
   }, []);
 
+  /** Saves when leaving the field, and only if the name actually changed. */
   const saveName = async () => {
-    if (!me || !name.trim()) return;
-    setBusy(true);
+    if (!me || !name.trim() || name.trim() === profiles[me]) return;
     try {
       await updateDisplayName(me, name);
       await qc.invalidateQueries({ queryKey: ['profiles'] });
       notify('Name updated');
     } catch (e) {
       notify('Could not update name', (e as Error).message);
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -78,10 +72,16 @@ export default function Settings() {
     <ScrollView contentContainerStyle={styles.wrap}>
       <View style={styles.col}>
         <Text style={styles.heading}>Display name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={colors.muted} />
-        <Pressable style={styles.button} onPress={saveName} disabled={busy}>
-          <Text style={styles.buttonText}>Save name</Text>
-        </Pressable>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          onBlur={saveName}
+          onSubmitEditing={saveName}
+          returnKeyType="done"
+          placeholder="Your name"
+          placeholderTextColor={colors.muted}
+        />
 
         <Text style={styles.heading}>Change password</Text>
         <TextInput style={styles.input} value={pw} onChangeText={setPw} placeholder="New password" placeholderTextColor={colors.muted} secureTextEntry autoCapitalize="none" />

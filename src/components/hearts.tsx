@@ -1,4 +1,4 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
@@ -43,7 +43,7 @@ function FloatingHeart({ heart, onDone }: { heart: Heart; onDone: (id: number) =
         opacity,
         transform: [{ translateX }, { translateY }, { scale }],
       }}>
-      <MaterialIcons name="favorite" size={heart.size} color={heart.tint % 3 === 0 ? palette.lilac : palette.lavender} />
+      <MaterialIcons name="favorite" size={heart.size} color={heart.tint % 3 === 0 ? palette.blush : palette.rose} />
     </Animated.View>
   );
 }

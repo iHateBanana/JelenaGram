@@ -2,7 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { fetchProfiles } from './api';
+import { clearSignedUrlCache, fetchProfiles } from './api';
 import { supabase } from './supabase';
 import type { Profiles } from './types';
 
@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         await supabase.auth.signOut();
         qc.clear();
+        await clearSignedUrlCache();
       },
     };
   }, [session, loading, me, profiles, qc]);

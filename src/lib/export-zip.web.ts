@@ -1,5 +1,3 @@
-import JSZip from 'jszip';
-
 export const supportsZip = true;
 
 export async function downloadAlbumZip(
@@ -7,6 +5,8 @@ export async function downloadAlbumZip(
   files: { url: string; name: string }[],
   onProgress: (done: number) => void,
 ): Promise<void> {
+  // Loaded on demand: rarely used, and about 100 KB that every album visit would otherwise download.
+  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   let done = 0;
   for (const f of files) {

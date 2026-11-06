@@ -7,6 +7,7 @@ import { fonts, Text, TextInput } from '@/components/text';
 import { Loading, Message } from '@/components/states';
 import { createAlbum, deleteAlbum, syncAlbum, type SyncProgress } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { notify } from '@/lib/confirm';
 import { listAlbumPhotos, listDeviceAlbums, pickPhotos, supportsDeviceAlbums } from '@/lib/media';
 import type { DeviceAlbum, SourcePhoto } from '@/lib/media-types';
 import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
@@ -46,8 +47,10 @@ export default function AddAlbum() {
       }
       const album = await createAlbum(albumName, sourceAlbumId);
       createdId = album.id;
-      await syncAlbum(album, sources, setProgress);
+      const { uploaded, failed } = await syncAlbum(album, sources, setProgress);
+      if (uploaded === 0 && failed > 0) throw new Error('None of the photos could be uploaded. Check your connection and try again.');
       createdId = null;
+      if (failed > 0) notify(`${failed} photo${failed === 1 ? '' : 's'} could not upload`, 'Open the album in My albums to add them again.');
       qc.invalidateQueries({ queryKey: ['myAlbums'] });
       qc.invalidateQueries({ queryKey: ['feed'] });
       router.back();

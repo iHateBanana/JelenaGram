@@ -1,14 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/text';
 
+import { useViewer } from '@/components/photo-viewer';
 import { Loading, Message } from '@/components/states';
-import { addComment, deleteComment, fetchComments } from '@/lib/api';
+import { addComment, deleteComment, fetchComments, fetchPhoto } from '@/lib/api';
 import type { Comment } from '@/lib/types';
 import { useAuth } from '@/lib/auth';
+import { confirm } from '@/lib/confirm';
+import { monthYear, timeAgo } from '@/lib/dates';
+import { findCachedPhoto, patchPhoto } from '@/lib/photo-cache';
 import { colors, MAX_CONTENT_WIDTH, themed, useTheme } from '@/lib/theme';
 
 export default function Comments() {
@@ -16,11 +21,25 @@ export default function Comments() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { me, nameOf } = useAuth();
   const qc = useQueryClient();
+  const viewer = useViewer();
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const insets = useSafeAreaInsets();
 
   const comments = useQuery({ queryKey: ['comments', id], queryFn: () => fetchComments(id), enabled: !!id });
+  const photo = useQuery({
+    queryKey: ['photo', id, me],
+    queryFn: () => fetchPhoto(id, me!),
+    enabled: !!id && !!me,
+    initialData: () => findCachedPhoto(qc, id),
+  });
+
+  // Keeps "View N comments" right without refetching the whole feed after each comment.
+  const commentCount = comments.data?.length;
+  useEffect(() => {
+    if (commentCount === undefined) return;
+    patchPhoto(qc, id, (p) => (p.commentCount === commentCount ? p : { ...p, commentCount }));
+  }, [commentCount, id, qc]);
 
   const threaded = useMemo(() => {
     const all = comments.data ?? [];
@@ -42,8 +61,6 @@ export default function Comments() {
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['comments', id] });
     qc.invalidateQueries({ queryKey: ['albumComments'] });
-    qc.invalidateQueries({ queryKey: ['feed'] });
-    qc.invalidateQueries({ queryKey: ['albumPhotos'] });
   };
 
   const send = useMutation({
@@ -54,7 +71,18 @@ export default function Comments() {
       refresh();
     },
   });
-  const remove = useMutation({ mutationFn: (commentId: string) => deleteComment(commentId), onSuccess: refresh });
+  const remove = useMutation({
+    mutationFn: async (comment: Comment) => {
+      const hasReplies = (comments.data ?? []).some((c) => c.parent_id === comment.id);
+      const ok = await confirm(
+        'Delete this comment?',
+        hasReplies ? 'Its replies will be deleted too.' : 'This cannot be undone.',
+        'Delete',
+      );
+      if (ok) await deleteComment(comment.id);
+    },
+    onSuccess: refresh,
+  });
 
   if (comments.isPending) return <Loading />;
   if (comments.isError) {
@@ -62,6 +90,7 @@ export default function Comments() {
   }
 
   const canSend = text.trim().length > 0 && !send.isPending;
+  const p = photo.data;
 
   return (
     <KeyboardAvoidingView
@@ -73,6 +102,26 @@ export default function Comments() {
           data={threaded}
           keyExtractor={(x) => x.c.id}
           contentContainerStyle={{ padding: 16, gap: 14, flexGrow: 1 }}
+          ListHeaderComponent={
+            p ? (
+              <Pressable
+                style={styles.photoRow}
+                onPress={() => viewer.open([p], 0)}
+                accessibilityRole="button"
+                accessibilityLabel="Open photo">
+                <Image
+                  source={{ uri: p.thumbUrl ?? p.url, cacheKey: p.thumbKey }}
+                  cachePolicy="memory-disk"
+                  style={styles.photoThumb}
+                  contentFit="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.photoAlbum} numberOfLines={1}>{p.album.name}</Text>
+                  <Text style={styles.time}>{monthYear(p.taken_at)}</Text>
+                </View>
+              </Pressable>
+            ) : undefined
+          }
           ListEmptyComponent={<Message title="No comments yet" body="Be the first to say something." />}
           renderItem={({ item: { c: item, reply } }) => (
             <View style={[styles.row, reply && styles.reply]}>
@@ -81,26 +130,29 @@ export default function Comments() {
                   <Text style={styles.author}>{nameOf(item.user_id)} </Text>
                   {item.body}
                 </Text>
-                <Pressable onPress={() => setReplyTo(item)} hitSlop={8}>
-                  <Text style={styles.delete}>Reply</Text>
-                </Pressable>
+                <View style={styles.meta}>
+                  <Text style={styles.time}>{timeAgo(item.created_at)}</Text>
+                  <Pressable onPress={() => setReplyTo(item)} style={styles.metaBtn} accessibilityRole="button">
+                    <Text style={styles.action}>Reply</Text>
+                  </Pressable>
+                  {item.user_id === me && (
+                    <Pressable onPress={() => remove.mutate(item)} style={styles.metaBtn} accessibilityRole="button">
+                      <Text style={styles.action}>Delete</Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
-              {item.user_id === me && (
-                <Pressable onPress={() => remove.mutate(item.id)} hitSlop={8}>
-                  <Text style={styles.delete}>Delete</Text>
-                </Pressable>
-              )}
             </View>
           )}
         />
-        {send.isError && <Text style={styles.error}>{send.error.message}</Text>}
+        {(send.isError || remove.isError) && <Text style={styles.error}>{(send.error ?? remove.error)?.message}</Text>}
         {replyTo && (
           <View style={styles.replyBar}>
-            <Text style={styles.delete} numberOfLines={1}>
+            <Text style={styles.action} numberOfLines={1}>
               Replying to {nameOf(replyTo.user_id)}
             </Text>
-            <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
-              <Text style={styles.delete}>Cancel</Text>
+            <Pressable onPress={() => setReplyTo(null)} accessibilityRole="button">
+              <Text style={styles.action}>Cancel</Text>
             </Pressable>
           </View>
         )}
@@ -112,9 +164,10 @@ export default function Comments() {
             value={text}
             onChangeText={setText}
             multiline
+            numberOfLines={1}
             maxLength={2000}
           />
-          <Pressable disabled={!canSend} onPress={() => send.mutate()} hitSlop={8} style={styles.postBtn}>
+          <Pressable disabled={!canSend} onPress={() => send.mutate()} style={styles.postBtn} accessibilityRole="button">
             <Text style={[styles.post, !canSend && { opacity: 0.4 }]}>Post</Text>
           </Pressable>
         </View>
@@ -124,13 +177,19 @@ export default function Comments() {
 }
 
 const styles = themed(() => StyleSheet.create({
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 14, marginBottom: 2, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  photoThumb: { width: 64, height: 64, borderRadius: 12, backgroundColor: colors.placeholder },
+  photoAlbum: { fontSize: 15, fontWeight: '600', color: colors.text },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  body: { flex: 1, fontSize: 15, color: colors.text },
-  author: { fontWeight: '700' },
-  delete: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  body: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.text },
+  author: { fontSize: 15, fontWeight: '700' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaBtn: { minHeight: 32, paddingHorizontal: 8, justifyContent: 'center' },
+  time: { color: colors.muted, fontSize: 13 },
+  action: { color: colors.muted, fontSize: 13, fontWeight: '600' },
   reply: { marginLeft: 28 },
-  replyBar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 6, backgroundColor: colors.likeTint },
-  error: { color: colors.link, paddingHorizontal: 16 },
+  replyBar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.likeTint },
+  error: { color: colors.link, fontSize: 14, paddingHorizontal: 16 },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,5 +210,5 @@ const styles = themed(() => StyleSheet.create({
     color: colors.text,
   },
   post: { color: colors.link, fontWeight: '700', fontSize: 16 },
-  postBtn: { paddingVertical: 8, paddingHorizontal: 4 },
+  postBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
 }));

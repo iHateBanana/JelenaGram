@@ -37,7 +37,13 @@ export default function AlbumComments() {
           <Pressable
             style={styles.card}
             onPress={() => router.push({ pathname: '/photo/[id]/comments', params: { id: item.photo_id } })}>
-            <Image source={{ uri: item.photoUrl }} style={styles.thumb} contentFit="cover" recyclingKey={item.id} />
+            <Image
+              source={{ uri: item.photoUrl, cacheKey: item.photoKey }}
+              cachePolicy="memory-disk"
+              style={styles.thumb}
+              contentFit="cover"
+              recyclingKey={item.id}
+            />
             <View style={{ flex: 1 }}>
               <Text style={styles.author}>{nameOf(item.user_id)}</Text>
               <Text style={styles.body}>{item.body}</Text>
